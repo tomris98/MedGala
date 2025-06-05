@@ -3,112 +3,144 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Gioco degli Obblighi</title>
+<title>Gioco Obblighi - Estrazione da Google Sheet</title>
 <style>
-  body { font-family: Arial, sans-serif; max-width: 600px; margin: 20px auto; }
-  label { font-weight: bold; margin-top: 15px; display: block; }
-  input[type=password] { width: 100%; padding: 5px; margin-bottom: 10px; font-size: 1em; }
-  button { padding: 10px 20px; font-size: 1em; margin-top: 10px; cursor: pointer; }
-  #estrazioni { margin-top: 20px; border-top: 1px solid #ccc; padding-top: 10px; max-height: 300px; overflow-y: auto; }
-  .estrazione-item { margin-bottom: 8px; }
+  body {
+    font-family: Arial, sans-serif;
+    max-width: 600px;
+    margin: 30px auto;
+    padding: 10px;
+  }
+  input.obbligo {
+    width: 100%;
+    font-size: 16px;
+    margin: 4px 0 12px;
+  }
+  input.obbligo[type=password] {
+    letter-spacing: 0.3em; /* per mostrare bene i pallini */
+  }
+  #estratti {
+    margin-top: 20px;
+    font-weight: bold;
+    border-top: 1px solid #ccc;
+    padding-top: 15px;
+  }
+  button {
+    margin: 5px 10px 15px 0;
+    padding: 10px 15px;
+    font-size: 16px;
+    cursor: pointer;
+  }
+  #obblighiDiv > div {
+    margin-bottom: 15px;
+  }
+  #obblighiDiv > div > strong {
+    display: block;
+    margin-bottom: 5px;
+  }
 </style>
 </head>
 <body>
+<h1>Gioco Obblighi - Estrazione</h1>
 
-<h1>Gioco degli Obblighi</h1>
+<button id="caricaBtn">Carica obblighi dal Google Sheet</button>
+<button id="estraiBtn" disabled>Estrai obbligo</button>
 
-<form id="formObblighi">
-  <div id="playersInputs"></div>
-  <button type="submit">Salva obblighi</button>
-</form>
-
-<button id="startGame" disabled>Estrai obbligo</button>
-
-<div id="estrazioni">
-  <h2>Obblighi estratti:</h2>
-  <div id="estrazioniList"></div>
-</div>
+<div id="obblighiDiv"></div>
+<div id="estratti"></div>
 
 <script>
-  const players = [
-    "Tommaso", "Michael", "Gianluca", "Peppe", "Alessio", "Vincenzo", "Giulia", "Elisa", "Beatrice"
-  ];
+  // === METTI QUI IL TUO ID GOOGLE SHEET ===
+  const sheetId = '13-hrE3BjeoEFzsVJfGJpXYeqsNS7RnfiPtFGwvGW1YQ';
 
-  const playersInputs = document.getElementById('playersInputs');
-  const form = document.getElementById('formObblighi');
-  const startGameBtn = document.getElementById('startGame');
-  const estrazioniList = document.getElementById('estrazioniList');
+  let obblighi = [];  // array di {nome, obbligo1, obbligo2}
+  let estrattiSet = new Set();
+  let estrattiCount = 0;
 
-  // Genera input password per ogni obbligo di ogni giocatore
-  players.forEach((player, i) => {
-    const container = document.createElement('div');
-    container.innerHTML = `
-      <label>${player} - Obbligo 1:</label>
-      <input type="password" name="obbligo_${i}_1" required />
-      <label>${player} - Obbligo 2:</label>
-      <input type="password" name="obbligo_${i}_2" required />
-    `;
-    playersInputs.appendChild(container);
+  const caricaBtn = document.getElementById('caricaBtn');
+  const estraiBtn = document.getElementById('estraiBtn');
+  const obblighiDiv = document.getElementById('obblighiDiv');
+  const estrattiDiv = document.getElementById('estratti');
+
+  caricaBtn.addEventListener('click', () => {
+    caricaBtn.disabled = true;
+    estrattiDiv.innerHTML = '';
+    estrattiSet.clear();
+    estrattiCount = 0;
+
+    fetch(`https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?sheet=Sheet1&tqx=out:json`)
+      .then(res => res.text())
+      .then(text => {
+        // Estraggo JSON pulito da risposta Google
+        const jsonData = JSON.parse(text.substr(47).slice(0, -2));
+        const rows = jsonData.table.rows;
+        obblighi = rows.map(r => ({
+          nome: r.c[0] ? r.c[0].v : '',
+          obbligo1: r.c[1] ? r.c[1].v : '',
+          obbligo2: r.c[2] ? r.c[2].v : '',
+        }));
+        mostraObblighiNascosti();
+        estraiBtn.disabled = false;
+      })
+      .catch(e => {
+        alert('Errore caricamento dati: ' + e);
+        caricaBtn.disabled = false;
+      });
   });
 
-  let obblighi = []; // array di stringhe obblighi (18)
-  let estratti = []; // array di oggetti {playerRicevente, obbligoTesto} estratti
-  let estrazioniFatte = 0;
+  function mostraObblighiNascosti() {
+    obblighiDiv.innerHTML = '';
+    obblighi.forEach(o => {
+      const container = document.createElement('div');
 
-  form.addEventListener('submit', e => {
-    e.preventDefault();
-    obblighi = [];
-    estratti = [];
-    estrazioniFatte = 0;
-    estrazioniList.innerHTML = '';
+      const nomeEl = document.createElement('strong');
+      nomeEl.textContent = o.nome;
+      container.appendChild(nomeEl);
 
-    // Prendo gli obblighi da input (nascosti come password)
-    players.forEach((player, i) => {
-      const o1 = form.elements[`obbligo_${i}_1`].value.trim();
-      const o2 = form.elements[`obbligo_${i}_2`].value.trim();
-      obblighi.push(o1);
-      obblighi.push(o2);
+      const input1 = document.createElement('input');
+      input1.type = 'password';
+      input1.className = 'obbligo';
+      input1.value = o.obbligo1;
+      input1.readOnly = true;
+      container.appendChild(input1);
+
+      const input2 = document.createElement('input');
+      input2.type = 'password';
+      input2.className = 'obbligo';
+      input2.value = o.obbligo2;
+      input2.readOnly = true;
+      container.appendChild(input2);
+
+      obblighiDiv.appendChild(container);
     });
-
-    // Abilita bottone estrazione
-    startGameBtn.disabled = false;
-    alert("Obblighi salvati! Puoi iniziare l'estrazione.");
-  });
-
-  // Funzione helper per scegliere un elemento casuale da array
-  function scegliCasuale(arr) {
-    return arr[Math.floor(Math.random() * arr.length)];
   }
 
-  startGameBtn.addEventListener('click', () => {
-    if (obblighi.length === 0) {
-      alert("Prima devi salvare gli obblighi.");
-      return;
-    }
-    if (estrazioniFatte >= obblighi.length) {
-      alert("Tutti gli obblighi sono stati estratti.");
-      startGameBtn.disabled = true;
+  estraiBtn.addEventListener('click', () => {
+    if (estrattiCount >= obblighi.length * 2) {
+      alert('Tutti gli obblighi sono stati estratti!');
+      estraiBtn.disabled = true;
       return;
     }
 
-    // Estrai obbligo casuale non ancora estratto
-    const obblighiDisponibili = obblighi.filter(o => !estratti.some(e => e.obbligoTesto === o));
-    const obbligoEstratto = scegliCasuale(obblighiDisponibili);
+    let estratto;
+    do {
+      // Pesco random persona e obbligo 1 o 2
+      const personaIdx = Math.floor(Math.random() * obblighi.length);
+      const obbligoN = Math.floor(Math.random() * 2) + 1;
+      estratto = `${obblighi[personaIdx].nome} - obbligo ${obbligoN}`;
+    } while (estrattiSet.has(estratto));
 
-    // Estrai giocatore casuale che riceve
-    const playerRicevente = scegliCasuale(players);
+    estrattiSet.add(estratto);
+    estrattiCount++;
 
-    // Salva estrazione
-    estratti.push({ playerRicevente, obbligoTesto: obbligoEstratto });
-    estrazioniFatte++;
+    // Prendo testo obbligo reale per mostrarlo
+    const personaIdx = obblighi.findIndex(o => estratto.startsWith(o.nome));
+    const obbligoN = estratto.includes('obbligo 1') ? 1 : 2;
+    const testoObbligo = obblighi[personaIdx][`obbligo${obbligoN}`];
 
-    // Mostra sotto obbligo e a chi è assegnato
-    const div = document.createElement('div');
-    div.className = 'estrazione-item';
-    div.textContent = `${playerRicevente} riceve l'obbligo: "${obbligoEstratto}"`;
-    estrazioniList.appendChild(div);
+    // Aggiungo estrazione sotto le precedenti
+    estrattiDiv.innerHTML += `<div>${estratto}: <b>${testoObbligo}</b></div>`;
   });
-
 </script>
 
 </body>
