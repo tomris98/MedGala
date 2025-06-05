@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Gioco degli Obblighi</title>
+<style>
+  body { font-family: Arial, sans-serif; max-width: 600px; margin: 20px auto; }
+  input[type=password] { width: 100%; padding: 5px; margin-bottom: 10px; font-size: 1em; }
+  button { padding: 10px 20px; font-size: 1em; margin-top: 10px; cursor: pointer; }
+  #estrazioni { margin-top: 20px; border-top: 1px solid #ccc; padding-top: 10px; max-height: 300px; overflow-y: auto; }
+  .estrazione-item { margin-bottom: 8px; }
+  label { font-weight: bold; display: block; margin-top: 15px; }
+</style>
+</head>
+<body>
+
+<h1>Gioco degli Obblighi</h1>
+
+<form id="formObblighi">
+  <div id="playersInputs"></div>
+  <button type="submit">Salva obblighi</button>
+</form>
+
+<button id="startGame" disabled>Inizia il gioco</button>
+
+<div id="estrazioni">
+  <h2>Obblighi estratti:</h2>
+  <div id="estrazioniList"></div>
+</div>
+
+<script>
+  const players = [
+    "Tommaso", "Michael", "Gianluca", "Peppe", "Alessio", "Vincenzo", "Giulia", "Elisa", "Beatrice"
+  ];
+
+  const maxEstrattiPerGiocatore = 2;
+  let obblighi = [];
+  let estrazioniFatte = [];
+
+  const playersInputs = document.getElementById('playersInputs');
+  const form = document.getElementById('formObblighi');
+  const startGameBtn = document.getElementById('startGame');
+  const estrazioniList = document.getElementById('estrazioniList');
+
+  players.forEach((player, i) => {
+    const container = document.createElement('div');
+    container.innerHTML = `
+      <label>${player} - Obbligo 1:</label>
+      <input type="password" name="obbligo_${i}_1" required />
+      <label>${player} - Obbligo 2:</label>
+      <input type="password" name="obbligo_${i}_2" required />
+    `;
+    playersInputs.appendChild(container);
+  });
+
+  form.addEventListener('submit', e => {
+    e.preventDefault();
+    obblighi = [];
+    estrazioniFatte = [];
+    estrazioniList.innerHTML = '';
+    players.forEach((player, i) => {
+      const o1 = form.elements[`obbligo_${i}_1`].value.trim();
+      const o2 = form.elements[`obbligo_${i}_2`].value.trim();
+      obblighi.push({ player, text: o1, estrattoCount: 0 });
+      obblighi.push({ player, text: o2, estrattoCount: 0 });
+    });
+    alert('Obblighi salvati! Puoi ora iniziare il gioco.');
+    startGameBtn.disabled = false;
+  });
+
+  startGameBtn.addEventListener('click', () => {
+    if (obblighi.length === 0) {
+      alert('Devi prima salvare gli obblighi!');
+      return;
+    }
+    const disponibili = obblighi.filter(o => o.estrattoCount < maxEstrattiPerGiocatore);
+    if (disponibili.length === 0) {
+      alert('Tutti gli obblighi sono stati estratti 2 volte. Il gioco è finito!');
+      return;
+    }
+    const estratto = disponibili[Math.floor(Math.random() * disponibili.length)];
+    estratto.estrattoCount++;
+    estrazioniFatte.push(estratto);
+    const div = document.createElement('div');
+    div.className = 'estrazione-item';
+    div.textContent = `${estratto.player}: ${estratto.text}`;
+    estrazioniList.appendChild(div);
+    estrazioniList.scrollTop = estrazioniList.scrollHeight;
+  });
+</script>
+
+</body>
+</html>
