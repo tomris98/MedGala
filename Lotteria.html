@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <title>Gioco degli Obblighi - Max 2 per persona</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      background-color: #f0f0f0;
+    }
+    h1 {
+      color: #222;
+    }
+    input[type=text], input[type=password] {
+      width: 100%;
+      margin-bottom: 10px;
+      padding: 6px;
+      font-size: 16px;
+    }
+    button {
+      padding: 10px 20px;
+      font-size: 16px;
+      cursor: pointer;
+      margin-right: 10px;
+    }
+    .results {
+      margin-top: 20px;
+      font-weight: bold;
+      font-size: 18px;
+    }
+    .storico {
+      margin-top: 30px;
+      padding: 10px;
+      background-color: #fff;
+      border: 1px solid #ccc;
+      max-height: 300px;
+      overflow-y: auto;
+    }
+    .estrazione {
+      margin-bottom: 10px;
+      padding: 8px;
+      border-bottom: 1px solid #ddd;
+    }
+  </style>
+</head>
+<body>
+  <h1>🎉 MEDGALAAAA</h1>
+  <p>Ognuno scrive due obblighi (anonimi). Ogni partecipante può ricevere al massimo <strong>2 obblighi</strong>.</p>
+
+  <form id="obblighiForm">
+    <div id="partecipantiInput"></div>
+    <button type="button" onclick="iniziaGioco()">✅ Inizia il gioco</button>
+    <button type="button" onclick="estraiObbligo()" id="btnEstrai" disabled>🎯 Estrai obbligo</button>
+  </form>
+
+  <div class="results" id="risultato"></div>
+  <div class="storico" id="storico"><h3>📜 Obblighi estratti:</h3></div>
+
+  <script>
+    const numPartecipanti = 9;
+    const partecipantiInput = document.getElementById("partecipantiInput");
+    const risultatoDiv = document.getElementById("risultato");
+    const storicoDiv = document.getElementById("storico");
+
+    let obblighiDisponibili = [];
+    let partecipanti = [];
+    let ricevuti = {}; // Tiene traccia degli obblighi ricevuti per persona
+
+    // Genera i campi per i partecipanti
+    for (let i = 1; i <= numPartecipanti; i++) {
+      partecipantiInput.innerHTML += `
+        <h3>Partecipante ${i}</h3>
+        <input type="text" placeholder="Nome (facoltativo o inventato)" id="nome${i}">
+        <input type="password" placeholder="Obbligo 1" id="obbligo${i}_1" required>
+        <input type="password" placeholder="Obbligo 2" id="obbligo${i}_2" required>
+        <hr>
+      `;
+    }
+
+    function iniziaGioco() {
+      obblighiDisponibili = [];
+      partecipanti = [];
+      ricevuti = {};
+      risultatoDiv.innerHTML = '';
+      storicoDiv.innerHTML = '<h3>📜 Obblighi estratti:</h3>';
+      document.getElementById("btnEstrai").disabled = false;
+
+      for (let i = 1; i <= numPartecipanti; i++) {
+        const nome = document.getElementById(`nome${i}`).value.trim() || `Partecipante ${i}`;
+        const obb1 = document.getElementById(`obbligo${i}_1`).value.trim();
+        const obb2 = document.getElementById(`obbligo${i}_2`).value.trim();
+
+        if (obb1 && obb2) {
+          partecipanti.push(nome);
+          ricevuti[nome] = 0;
+          obblighiDisponibili.push({ testo: obb1, autore: nome });
+          obblighiDisponibili.push({ testo: obb2, autore: nome });
+        } else {
+          alert(`Controlla che il partecipante ${i} abbia inserito entrambi gli obblighi.`);
+          return;
+        }
+      }
+
+      alert("Gioco pronto! Premi 'Estrai obbligo' per cominciare.");
+    }
+
+    function estraiObbligo() {
+      const candidati = partecipanti.filter(nome => ricevuti[nome] < 2);
+
+      if (obblighiDisponibili.length === 0 || candidati.length === 0) {
+        risultatoDiv.innerHTML = "🎉 Tutti gli obblighi sono stati assegnati!";
+        document.getElementById("btnEstrai").disabled = true;
+        return;
+      }
+
+      const indexObbligo = Math.floor(Math.random() * obblighiDisponibili.length);
+      const obbligoEstratto = obblighiDisponibili.splice(indexObbligo, 1)[0];
+
+      // Estrai un destinatario che non ha ancora 2 obblighi
+      let destinatario;
+      let tentativi = 0;
+      do {
+        destinatario = candidati[Math.floor(Math.random() * candidati.length)];
+        tentativi++;
+        if (tentativi > 50) break; // prevenzione loop infiniti
+      } while (ricevuti[destinatario] >= 2);
+
+      ricevuti[destinatario]++;
+
+      const risultato = `🎲 <strong>${destinatario}</strong> deve: <em>${obbligoEstratto.testo}</em>`;
+      risultatoDiv.innerHTML = risultato;
+
+      const p = document.createElement("div");
+      p.className = "estrazione";
+      p.innerHTML = risultato;
+      storicoDiv.appendChild(p);
+    }
+  </script>
+</body>
+</html>
